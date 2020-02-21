@@ -1,0 +1,22 @@
+How to build KaHyPar on bwunicluster:
+
+0.) Put this in your .bashrc / .zshrc:
+
+module load lib/boost/1.69.0
+module load compiler/gnu/9.1
+module load devel/cmake/3.14.0
+
+module list
+export TMOUT=0
+
+1.) clone KaHyPar
+3.) Download boost to /tmp: cd /tmp && wget https://sourceforge.net/projects/boost/files/boost/1.69.0/boost_1_69_0.tar.bz2
+4.) Extract boost: tar -xf boost_1_69_0.tar.bz2
+5.) cd boost_1_69_0
+6.) Move everything inside boost dir to the right directory (might take a while): mv * ~/<KaHyPar directory>/external_tools/boost/src/boost
+2.) Create build directory: mkdir release && cd release
+3.) Call cmake like this: cmake .. -DCMAKE_BUILD_TYPE=Release -DKAHYPAR_USE_MINIMAL_BOOST=ON
+8.) cmake .
+9.) make mini_boost
+10.) make KaHyPar
+
