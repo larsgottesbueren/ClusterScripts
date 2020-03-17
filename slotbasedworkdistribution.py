@@ -126,6 +126,10 @@ def manage_jobs(try_squeue):
 			active_jobs = parse_squeue("RUNNING,PENDING")
 			active_slots = [jobid2slot[job] for job in active_jobs]
 			available_slots = get_available_slots(active_slots)
+			if active_slots == []:
+				print("parse_squeue. active slots empty. submit all. available_slots = ", available_slots)
+			else:
+				print("parse_squeue. newly available_slots = ", available_slots)
 		except Exception as e:
 			print(e)
 
@@ -154,6 +158,7 @@ def load_remaining_work():
 		print("Reading remaining work file {}".format(remaining_work_file))
 	else:
 		my_wf = workload_file
+		print("Reading initial workload file ", workload_file)
 	with open(my_wf,'r') as wf:
 		return [l for l in wf]
 
@@ -186,8 +191,6 @@ while True:
 
 		break
 	else:
-		if i % 100 == 0:
-			print("available slots", available_slots)
-		for s in available_slots:	#do it here to eliminate potential race condition on the should_i_terminate function
+		for s in available_slots:
 			submit(s)
 		time.sleep(3)	#sleep for 3 seconds
