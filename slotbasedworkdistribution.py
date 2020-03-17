@@ -12,9 +12,7 @@ my_dir = os.path.dirname(os.path.abspath(__file__))
 
 # TODO currently we have dynamic load balancing. also offer guided, i.e. reduce number of tasks per slot when the number of remaining work drops.
 
-guided_distribution = False
-MAX_TASKS_IN_SLOT_QUEUE=4
-MIN_TASKS_IN_SLOT_QUEUE=2
+MAX_TASKS_IN_SLOT_QUEUE=6
 
 MAX_JOBS_IN_QUEUE=50
 JOB_TIMELIMIT=172800			#seconds
@@ -101,28 +99,21 @@ def retake_work(workload_list, slot):
 		workload_list.extend(remaining_work_of_slot(slot))
 		os.remove(slotqueue_filename(slot))
 
-def submit(slot, timelimit=JOB_TIMELIMIT):
+def submit(slot):
 	if len(remaining_work) == 0:
 		return
 
 	if slot in slot2jobid:
 		del jobid2slot[slot2jobid[slot]]	#slot2jobid[slot] is overridden below.
 		del slot2jobid[slot]
-	walltime=timelimit + BUFFER
 
-	time_option = "-t " + str(walltime) 
+	time_option = "-t " + str(JOB_TIMELIMIT) 
 	queue_option = "--export=QUEUE_FILE=\"" + slotqueue_filename(slot) + "\"" 
-	jobdesc = "sbatch -p single -n 1 --exclusive --parsable --test-only" + time_option + queue_option + "./smallworkqueue_worker.sh"
+	jobdesc = "sbatch -p single -n 1 --exclusive --parsable " + time_option + " " + queue_option + " ./smallworkqueue_worker.sh"
 	print(jobdesc)
 	out, err = subprocess.Popen([jobdesc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
 
-	with f as open("debug.log", 'a'):
-		f.write(out)
-		f.write("\n --------- \n")
-
-
 	if len(out.strip()):
-		#TODO find out which number is the job id. currently i'm guessing it's the first one
 		jobid = int(out.strip()[0])
 		slot2jobid[slot] = jobid
 		jobid2slot[jobid] = slot
@@ -200,4 +191,4 @@ while True:
 	else:
 		for s in available_slots:	#do it here to eliminate potential race condition on the should_i_terminate function
 			submit(s)
-		time.sleep(20)	#sleep for 3 seconds
+		time.sleep(3)	#sleep for 3 seconds
