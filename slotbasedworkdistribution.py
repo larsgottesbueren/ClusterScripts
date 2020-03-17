@@ -18,8 +18,6 @@ MAX_JOBS_IN_QUEUE=50
 JOB_TIMELIMIT=172800			#seconds
 BUFFER=1800						#seconds
 
-INSTANCE_TIMELIMIT=28800		#seconds
-
 parser = argparse.ArgumentParser()
 parser.add_argument("workload", type=str)
 args = parser.parse_args()
@@ -110,11 +108,11 @@ def submit(slot):
 	time_option = "-t " + str(JOB_TIMELIMIT) 
 	queue_option = "--export=QUEUE_FILE=\"" + slotqueue_filename(slot) + "\"" 
 	jobdesc = "sbatch -p single -n 1 --exclusive --parsable " + time_option + " " + queue_option + " ./smallworkqueue_worker.sh"
-	print(jobdesc)
+	#print(jobdesc)
 	out, err = subprocess.Popen([jobdesc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
 
 	if len(out.strip()):
-		jobid = int(out.strip()[0])
+		jobid = int(out.strip())
 		slot2jobid[slot] = jobid
 		jobid2slot[jobid] = slot
 		with open(slotjobid_filename(slot), 'w') as f:
