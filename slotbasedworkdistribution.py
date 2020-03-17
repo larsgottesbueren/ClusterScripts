@@ -15,8 +15,7 @@ my_dir = os.path.dirname(os.path.abspath(__file__))
 MAX_TASKS_IN_SLOT_QUEUE=6
 
 MAX_JOBS_IN_QUEUE=50
-JOB_TIMELIMIT=172800			#seconds
-BUFFER=1800						#seconds
+JOB_TIMELIMIT=259200			#seconds
 
 parser = argparse.ArgumentParser()
 parser.add_argument("workload", type=str)
@@ -108,7 +107,7 @@ def submit(slot):
 	time_option = "-t " + str(JOB_TIMELIMIT) 
 	queue_option = "--export=QUEUE_FILE=\"" + slotqueue_filename(slot) + "\"" 
 	jobdesc = "sbatch -p single -n 1 --exclusive --parsable " + time_option + " " + queue_option + " ./smallworkqueue_worker.sh"
-	#print(jobdesc)
+	print(jobdesc)
 	out, err = subprocess.Popen([jobdesc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
 
 	if len(out.strip()):
