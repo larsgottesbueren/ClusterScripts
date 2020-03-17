@@ -15,7 +15,6 @@ my_dir = os.path.dirname(os.path.abspath(__file__))
 MAX_TASKS_IN_SLOT_QUEUE=6
 
 MAX_JOBS_IN_QUEUE=50
-JOB_TIMELIMIT=259200			#seconds
 
 parser = argparse.ArgumentParser()
 parser.add_argument("workload", type=str)
@@ -45,7 +44,7 @@ def serialize_slot_work(workloads, slots):
 
 def parse_squeue(state):
 	result = []
-	p,err=subprocess.Popen(["squeue", "--long", "-t " + state], stdout=subprocess.PIPE, universal_newlines=True).communicate()
+	p,err=subprocess.Popen(["squeue --long -t " + state], stdout=subprocess.PIPE, universal_newlines=True).communicate()
 	lines = p.split('\n')
 	if len(lines) < 1:
 		raise RuntimeError("squeue returned empty list")
@@ -104,7 +103,7 @@ def submit(slot):
 		del jobid2slot[slot2jobid[slot]]	#slot2jobid[slot] is overridden below.
 		del slot2jobid[slot]
 
-	time_option = "-t " + str(JOB_TIMELIMIT) 
+	time_option = "-t 72:00:00" 
 	queue_option = "--export=QUEUE_FILE=\"" + slotqueue_filename(slot) + "\"" 
 	jobdesc = "sbatch -p single -n 1 --exclusive --parsable " + time_option + " " + queue_option + " ./smallworkqueue_worker.sh"
 	print(jobdesc)
@@ -123,7 +122,7 @@ def manage_jobs(try_squeue):
 
 	if try_squeue:
 		try:
-			active_jobs = parse_squeue("RUNNING, PENDING")
+			active_jobs = parse_squeue("RUNNING,PENDING")
 			active_slots = [jobid2slot[job] for job in active_jobs]
 			available_slots = get_available_slots(active_slots)
 		except Exception as e:
@@ -186,6 +185,8 @@ while True:
 
 		break
 	else:
+		if i % 100 == 0:
+			print("available slots", available_slots)
 		for s in available_slots:	#do it here to eliminate potential race condition on the should_i_terminate function
 			submit(s)
 		time.sleep(3)	#sleep for 3 seconds
