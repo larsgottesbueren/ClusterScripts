@@ -43,8 +43,9 @@ def serialize_slot_work(workloads, slots):
 		serialize(w, slotqueue_filename(s))
 
 def parse_squeue(state):
-	result = []
-	p,err=subprocess.Popen(["squeue --long -t " + state], stdout=subprocess.PIPE, universal_newlines=True).communicate()
+	parse_desc = "squeue --long -t " + state
+	print("parse_desc=", parse_desc)
+	p, err = subprocess.Popen([parse_desc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
 	lines = p.split('\n')
 	if len(lines) < 1:
 		raise RuntimeError("squeue returned empty list")
@@ -106,7 +107,7 @@ def submit(slot):
 	time_option = "-t 72:00:00" 
 	queue_option = "--export=QUEUE_FILE=\"" + slotqueue_filename(slot) + "\"" 
 	jobdesc = "sbatch -p single -n 1 --exclusive --parsable " + time_option + " " + queue_option + " ./smallworkqueue_worker.sh"
-	print(jobdesc)
+	print("jobdesc=", jobdesc)
 	out, err = subprocess.Popen([jobdesc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
 
 	if len(out.strip()):
