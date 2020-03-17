@@ -1,12 +1,12 @@
 #!/bin/bash
-QUEUE_FILE=$1
+
+# QUEUE_FILE must now be specified as an environment variable. can be done during sbatch with --export=QUEUE_FILE="workload_name.slot_id.queue"
 TMP_QUEUE_FILE=$QUEUE_FILE".tmp"
 FAILED_QUEUE_FILE=$QUEUE_FILE".failed"
 DEBUG_FILE=$QUEUE_FILE".debug"
 
-module load lib/boost/1.69.0
-module load compiler/gnu/9.1
-module load devel/python/3.5.2
+module load compiler/gnu/9.2
+devel/python/3.8.1_gnu_9.2
 
 MAX_IDLE_STEPS=100
 STEP=0
