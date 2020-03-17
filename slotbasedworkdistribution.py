@@ -48,21 +48,13 @@ def serialize_slot_work(workloads, slots):
 	for w,s in zip(workloads, slots):
 		serialize(w, slotqueue_filename(s))
 
-def parse_showq():
-	running = []
-	idle = []
-	p,err=subprocess.Popen(["showq"], stdout=subprocess.PIPE, universal_newlines=True).communicate()
+def parse_squeue(state):
+	result = []
+	p,err=subprocess.Popen(["squeue", "--long", "-t " + state], stdout=subprocess.PIPE, universal_newlines=True).communicate()
 	lines = p.split('\n')
-	if len(lines) < 5:
-		raise RuntimeError("showq returned empty list")
-	for l in lines:
-		if "Idle" in l or "Deferred" in l:
-			jobid = int(l.split()[0])
-			idle.append(jobid)
-		elif "Running" in l:
-			jobid = int(l.split()[0])
-			running.append(jobid)
-	return list(itertools.chain(running,idle)),running,idle
+	if len(lines) < 1:
+		raise RuntimeError("squeue returned empty list")
+	return [int(l.split()[0]) for l in lines[1:]]
 
 def slotqueue_filename(slot):
 	return "{}_slot_{}.queue".format(workload_file, slot)
@@ -117,23 +109,33 @@ def submit(slot, timelimit=JOB_TIMELIMIT):
 		del jobid2slot[slot2jobid[slot]]	#slot2jobid[slot] is overridden below.
 		del slot2jobid[slot]
 	walltime=timelimit + BUFFER
-	jobdesc="msub -q singlenode -l nodes=1:ppn=16,pmem=62gb,walltime=" + str(walltime) + "naccesspolicy=singlejob " + my_dir + "/bwclusterwrapper.sh \"" + my_dir + "/smallworkqueue_worker.sh " + slotqueue_filename(slot) + "\""
-	#print(jobdesc)
+
+	time_option = "-t " + str(walltime) 
+	queue_option = "--export=QUEUE_FILE=\"" + slotqueue_filename(slot) + "\"" 
+	jobdesc = "sbatch -p single -n 1 --exclusive --parsable --test-only" + time_option + queue_option + "./smallworkqueue_worker.sh"
+	print(jobdesc)
 	out, err = subprocess.Popen([jobdesc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
+
+	with f as open("debug.log", 'a'):
+		f.write(out)
+		f.write("\n --------- \n")
+
+
 	if len(out.strip()):
-		jobid = int(out.strip())
+		#TODO find out which number is the job id. currently i'm guessing it's the first one
+		jobid = int(out.strip()[0])
 		slot2jobid[slot] = jobid
 		jobid2slot[jobid] = slot
 		with open(slotjobid_filename(slot), 'w') as f:
 			f.write(str(jobid))
 
-def manage_jobs(try_showq):
+def manage_jobs(try_squeue):
 	active_slots = list(range(MAX_JOBS_IN_QUEUE))
 	available_slots = []
 
-	if try_showq:
+	if try_squeue:
 		try:
-			active_jobs, running_jobs, idle_jobs = parse_showq()
+			active_jobs = parse_squeue("RUNNING, PENDING")
 			active_slots = [jobid2slot[job] for job in active_jobs]
 			available_slots = get_available_slots(active_slots)
 		except Exception as e:
@@ -198,4 +200,4 @@ while True:
 	else:
 		for s in available_slots:	#do it here to eliminate potential race condition on the should_i_terminate function
 			submit(s)
-		time.sleep(3)	#sleep for 3 seconds
+		time.sleep(20)	#sleep for 3 seconds
