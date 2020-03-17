@@ -10,10 +10,7 @@ import time
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 
-# TODO currently we have dynamic load balancing. also offer guided, i.e. reduce number of tasks per slot when the number of remaining work drops.
-
 MAX_TASKS_IN_SLOT_QUEUE=6
-
 MAX_JOBS_IN_QUEUE=50
 
 parser = argparse.ArgumentParser()
@@ -22,7 +19,6 @@ args = parser.parse_args()
 workload_file = args.workload
 remaining_work_file = "{}.remaining".format(workload_file)
 terminate_work_file = "{}.terminate".format(workload_file)
-#workload_file = "testfile.txt"
 
 
 def chunk(l, nchunks):
@@ -44,12 +40,11 @@ def serialize_slot_work(workloads, slots):
 
 def parse_squeue(state):
 	parse_desc = "squeue --long -t " + state
-	print("parse_desc=", parse_desc)
 	p, err = subprocess.Popen([parse_desc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
 	lines = p.split('\n')
-	if len(lines) < 1:
-		raise RuntimeError("squeue returned empty list")
-	return [int(l.split()[0]) for l in lines[1:]]
+	if len(lines) < 3:
+		raise RuntimeError("squeue returned nothing")
+	return [int(l.split()[0]) for l in lines[2:-1]]
 
 def slotqueue_filename(slot):
 	return "{}_slot_{}.queue".format(workload_file, slot)
@@ -101,15 +96,14 @@ def submit(slot):
 		return
 
 	if slot in slot2jobid:
-		del jobid2slot[slot2jobid[slot]]	#slot2jobid[slot] is overridden below.
+		del jobid2slot[slot2jobid[slot]]
 		del slot2jobid[slot]
 
 	time_option = "-t 72:00:00" 
 	queue_option = "--export=QUEUE_FILE=\"" + slotqueue_filename(slot) + "\"" 
 	jobdesc = "sbatch -p single -n 1 --exclusive --parsable " + time_option + " " + queue_option + " ./smallworkqueue_worker.sh"
-	print("jobdesc=", jobdesc)
+	print("submit job with the command: ", jobdesc)
 	out, err = subprocess.Popen([jobdesc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
-
 	if len(out.strip()):
 		jobid = int(out.strip())
 		slot2jobid[slot] = jobid
