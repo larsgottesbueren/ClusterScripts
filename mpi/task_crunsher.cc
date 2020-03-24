@@ -71,7 +71,7 @@ void distribute_jobs(const std::string& queue_file, const int num_tasks) {
 }
 
 int main(int argc, char** argv) {
-    if ( argc != 2 ) {
+    if ( argc >= 2 ) {
       std::exit(-1);
     }
 
@@ -104,6 +104,7 @@ int main(int argc, char** argv) {
           if ( file_exists(queue_file) && !is_file_empty(queue_file) ) {
             if ( waiting_for_new_jobs ) {
               // Global queue file exists => distribute work to local queues
+              std::this_thread::sleep_for(CHRONO_SLEEP_TIME); // sleep in case of concurrent I/O with master
               distribute_jobs(queue_file, size);
               waiting_for_new_jobs = false;
             } else {
