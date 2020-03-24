@@ -1,4 +1,5 @@
 #include <mpi.h>
+#include <random>
 #include <vector>
 #include <algorithm>
 #include <thread>
@@ -48,9 +49,9 @@ void write_jobs(const std::string& filename, const std::vector<std::string>& job
   job_stream.close();
 }
 
-void distribute_jobs(const std::string& queue_file, const int num_tasks) {
+void distribute_jobs(const std::string& queue_file, const int num_tasks, std::mt19937& g) {
   std::vector<std::string> jobs = read_jobs(queue_file);
-  std::random_shuffle(jobs.begin(), jobs.end());
+  std::shuffle(jobs.begin(), jobs.end(), g);
 
   size_t num_jobs = jobs.size();
   size_t steps = std::max(1UL, num_jobs / num_tasks + ( num_jobs % num_tasks != 0 ));
@@ -91,6 +92,8 @@ int main(int argc, char** argv) {
       create_file(queue_file);
     }
 
+    std::random_device rd;
+    std::mt19937 g(rd());
     size_t steps = 0;
     std::vector<std::string> failed_jobs;
     bool waiting_for_new_jobs = true;
@@ -105,7 +108,7 @@ int main(int argc, char** argv) {
             if ( waiting_for_new_jobs ) {
               // Global queue file exists => distribute work to local queues
               std::this_thread::sleep_for(CHRONO_SLEEP_TIME); // sleep in case of concurrent I/O with master
-              distribute_jobs(queue_file, size);
+              distribute_jobs(queue_file, size, g);
               waiting_for_new_jobs = false;
             } else {
               // Current queue is finished clear file and wait for new jobs
