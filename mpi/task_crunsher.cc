@@ -72,7 +72,7 @@ void distribute_jobs(const std::string& queue_file, const int num_tasks, std::mt
 }
 
 int main(int argc, char** argv) {
-    if ( argc >= 2 ) {
+    if ( argc < 2 ) {
       std::exit(-1);
     }
 

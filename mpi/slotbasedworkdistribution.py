@@ -101,9 +101,10 @@ def submit(slot):
 		del jobid2slot[slot2jobid[slot]]
 		del slot2jobid[slot]
 
-	time_option = "-t 01:00:00"
-	queue_option = "--export=QUEUE_FILE=\"" + slotqueue_filename(slot) + "\""
-	jobdesc = "sbatch -p dev_multiple -N " + TASKS_PER_JOB + " -n 1 --exclusive --parsable " + time_option + " " + queue_option + " ./smallworkqueue_worker.sh"
+	time_option = "-t 00:10:00"
+	queue_option = "--export=QUEUE_:qFILE=\"" + slotqueue_filename(slot) + "\""
+	node_options = "-N " + str(TASKS_PER_JOB) + " -n " + str(TASKS_PER_JOB) + " --ntasks-per-node=1"
+	jobdesc = "sbatch -p dev_multiple " + node_options + " --exclusive --parsable " + time_option + " " + queue_option + " ./smallworkqueue_worker.sh"
 	print("submit job with the command: ", jobdesc)
 	out, err = subprocess.Popen([jobdesc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
 	if len(out.strip()):
