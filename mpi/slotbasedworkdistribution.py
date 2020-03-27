@@ -35,9 +35,9 @@ def serialize(workload, filename):
 			f.write(l)
 	os.rename(tmp_filename, filename)
 
-def serialize_slot_work(workloads, slots):
-	for w,s in zip(workloads, slots):
-		serialize(w, slotqueue_filename(s))
+def serialize_work(workloads, queue_files):
+	for w,q in zip(workloads, queue_files):
+		serialize(w, q)
 
 def parse_squeue(state):
 	parse_desc = "squeue --long -t " + state
@@ -63,22 +63,26 @@ def remaining_work_of_slot_task(slot, task):
 	except FileNotFoundError:
 		return []
 
-def has_empty_queue(slot):
-	try:
-		return os.path.getsize(slotqueue_filename(slot)) == 0
-	except:
-		return False
-
 def is_queue_missing_or_empty(slot):
-	try:
-		return os.path.getsize(slotqueue_filename(slot)) == 0
-	except FileNotFoundError:
-		return True
-	except:
-		return False
+	for task in range(TASKS_PER_JOB):
+		try:
+			if os.path.getsize(slotqueue_task_filename(slot, task)) != 0:
+				return False
+		except FileNotFoundError:
+			return True
+	return False
 
-def get_active_slots_with_empty_queue(active_slots):
-	return list(filter(lambda slot: has_empty_queue(slot), active_slots))
+def get_empty_queue_files_of_active_slots(active_slots):
+	empty_queue_files = []
+	for slot in active_slots:
+		for task in range(TASKS_PER_JOB):
+			queue_file = slotqueue_task_filename(slot, task)
+			try:
+				if os.path.getsize(queue_file) == 0:
+					empty_queue_files.extend(queue_file)
+			except:
+				empty_queue_files.extend(queue_file)
+	return empty_queue_files
 
 def get_available_slots(active_slots):
 	available_slots = set(range(MAX_JOBS_IN_QUEUE))
@@ -102,9 +106,9 @@ def submit(slot):
 		del slot2jobid[slot]
 
 	time_option = "-t 00:10:00"
-	queue_option = "--export=QUEUE_:qFILE=\"" + slotqueue_filename(slot) + "\""
+	queue_option = "--export=QUEUE_FILE=\"" + slotqueue_filename(slot) + "\",NUM_NODES=\"" + str(TASKS_PER_JOB) + "\""
 	node_options = "-N " + str(TASKS_PER_JOB) + " -n " + str(TASKS_PER_JOB) + " --ntasks-per-node=1"
-	jobdesc = "sbatch -p dev_multiple " + node_options + " --exclusive --parsable " + time_option + " " + queue_option + " ./smallworkqueue_worker.sh"
+	jobdesc = "sbatch -p dev_multiple " + node_options + " --exclusive --parsable " + time_option + " " + queue_option + " ./parbatch_wrapper.sh"
 	print("submit job with the command: ", jobdesc)
 	out, err = subprocess.Popen([jobdesc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
 	if len(out.strip()):
@@ -135,13 +139,13 @@ def manage_jobs(try_squeue):
 	for s in available_slots:
 		retake_work(remaining_work, s)
 
-	slots_with_empty_queue = get_active_slots_with_empty_queue(active_slots)
-	num_active_slots_with_empty_queue = len(slots_with_empty_queue)
-	num_tasks_to_distribute = min(len(slots_with_empty_queue) * MAX_TASKS_IN_SLOT_QUEUE * TASKS_PER_JOB, len(remaining_work))
-	chunked_tasks = chunk(remaining_work[:num_tasks_to_distribute], len(slots_with_empty_queue))
+	empty_queue_files = get_empty_queue_files_of_active_slots(active_slots)
+	num_active_slots_with_empty_queue = len(empty_queue_files)
+	num_tasks_to_distribute = min(len(empty_queue_files) * MAX_TASKS_IN_SLOT_QUEUE, len(remaining_work))
+	chunked_tasks = chunk(remaining_work[:num_tasks_to_distribute], len(empty_queue_files))
 	del remaining_work[:num_tasks_to_distribute]
 	if num_tasks_to_distribute > 0 or old_remaining_tasks != len(remaining_work):	#save some IO, huh?
-		serialize_slot_work(chunked_tasks, slots_with_empty_queue)
+		serialize_work(chunked_tasks, empty_queue_files)
 		serialize(remaining_work, remaining_work_file)
 
 	return available_slots
