@@ -79,9 +79,9 @@ def get_empty_queue_files_of_active_slots(active_slots):
 			queue_file = slotqueue_task_filename(slot, task)
 			try:
 				if os.path.getsize(queue_file) == 0:
-					empty_queue_files.extend(queue_file)
+					empty_queue_files.extend([queue_file])
 			except:
-				empty_queue_files.extend(queue_file)
+				empty_queue_files.extend([queue_file])
 	return empty_queue_files
 
 def get_available_slots(active_slots):
@@ -105,10 +105,10 @@ def submit(slot):
 		del jobid2slot[slot2jobid[slot]]
 		del slot2jobid[slot]
 
-	time_option = "-t 00:10:00"
-	queue_option = "--export=QUEUE_FILE=\"" + slotqueue_filename(slot) + "\",NUM_NODES=\"" + str(TASKS_PER_JOB) + "\""
+	time_option = "-t 48:00:00"
+	parbatch_args = slotqueue_filename(slot) + " " + str(TASKS_PER_JOB)
 	node_options = "-N " + str(TASKS_PER_JOB) + " -n " + str(TASKS_PER_JOB) + " --ntasks-per-node=1"
-	jobdesc = "sbatch -p dev_multiple " + node_options + " --exclusive --parsable " + time_option + " " + queue_option + " ./parbatch_wrapper.sh"
+	jobdesc = "sbatch -p multiple " + node_options + " --exclusive --parsable " + time_option + " ./parbatch_wrapper.sh " + parbatch_args
 	print("submit job with the command: ", jobdesc)
 	out, err = subprocess.Popen([jobdesc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
 	if len(out.strip()):
@@ -147,7 +147,6 @@ def manage_jobs(try_squeue):
 	if num_tasks_to_distribute > 0 or old_remaining_tasks != len(remaining_work):	#save some IO, huh?
 		serialize_work(chunked_tasks, empty_queue_files)
 		serialize(remaining_work, remaining_work_file)
-
 	return available_slots
 
 def should_i_terminate():
