@@ -11,3 +11,5 @@ for ((task=0; task < NUM_NODES; task++));
 do
   echo "./smallworkqueue_worker.sh $QUEUE_FILE.$task" >> $JOB_FILE
 done
+
+parbatch $JOB_FILE
