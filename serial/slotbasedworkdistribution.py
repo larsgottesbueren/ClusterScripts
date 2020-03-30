@@ -133,7 +133,6 @@ def manage_jobs(try_squeue):
 		retake_work(remaining_work, s)
 
 	slots_with_empty_queue = get_active_slots_with_empty_queue(active_slots)
-	num_active_slots_with_empty_queue = len(slots_with_empty_queue)
 	num_tasks_to_distribute = min(len(slots_with_empty_queue) * MAX_TASKS_IN_SLOT_QUEUE, len(remaining_work))
 	chunked_tasks = chunk(remaining_work[:num_tasks_to_distribute], len(slots_with_empty_queue))
 	del remaining_work[:num_tasks_to_distribute]
