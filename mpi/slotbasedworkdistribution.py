@@ -11,7 +11,7 @@ import time
 my_dir = os.path.dirname(os.path.abspath(__file__))
 
 MAX_TASKS_IN_SLOT_QUEUE=6
-MAX_JOBS_IN_QUEUE=3 #25
+MAX_JOBS_IN_QUEUE=25
 TASKS_PER_JOB=2
 
 parser = argparse.ArgumentParser()
@@ -105,10 +105,10 @@ def submit(slot):
 		del jobid2slot[slot2jobid[slot]]
 		del slot2jobid[slot]
 
-	time_option = "-t 00:20:00"
+	time_option = "-t 48:00:00"
 	parbatch_args = slotqueue_filename(slot) + " " + str(TASKS_PER_JOB)
 	node_options = "-N " + str(TASKS_PER_JOB) + " -n " + str(TASKS_PER_JOB) + " --ntasks-per-node=1"
-	jobdesc = "sbatch -p dev_multiple " + node_options + " --exclusive --parsable " + time_option + " ./parbatch_wrapper.sh " + parbatch_args
+	jobdesc = "sbatch -p multiple " + node_options + " --exclusive --parsable " + time_option + " ./parbatch_wrapper.sh " + parbatch_args
 	print("submit job with the command: ", jobdesc)
 	out, err = subprocess.Popen([jobdesc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
 	if len(out.strip()):
