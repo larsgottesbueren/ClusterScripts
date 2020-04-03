@@ -7,6 +7,7 @@ import itertools
 import subprocess
 import os
 import time
+import glob
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -176,6 +177,10 @@ for s in range(MAX_JOBS_IN_QUEUE):
 
 i = 0
 while True:
+  # Remove core dump files
+  for coredump_file in glob.glob("core*"):
+    os.remove(coredump_file)
+
 	available_slots = manage_jobs(i % 100 == 0)
 	if i % 100 == 0:		#3*100 seconds = 5 minutes
 		print(len(remaining_work), "unassigned tasks in remaining work.", "times woken up", i)

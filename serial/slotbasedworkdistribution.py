@@ -7,6 +7,7 @@ import itertools
 import subprocess
 import os
 import time
+import glob
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -99,8 +100,8 @@ def submit(slot):
 		del jobid2slot[slot2jobid[slot]]
 		del slot2jobid[slot]
 
-	time_option = "-t 72:00:00" 
-	queue_option = "--export=QUEUE_FILE=\"" + slotqueue_filename(slot) + "\"" 
+	time_option = "-t 72:00:00"
+	queue_option = "--export=QUEUE_FILE=\"" + slotqueue_filename(slot) + "\""
 	jobdesc = "sbatch -p single -n 1 --exclusive --parsable " + time_option + " " + queue_option + " ./smallworkqueue_worker.sh"
 	print("submit job with the command: ", jobdesc)
 	out, err = subprocess.Popen([jobdesc], shell=True, stdout=subprocess.PIPE, universal_newlines=True).communicate()
@@ -170,13 +171,16 @@ for s in range(MAX_JOBS_IN_QUEUE):
 
 i = 0
 while True:
+  # Remove core dump files
+  for coredump_file in glob.glob("core*"):
+    os.remove(coredump_file)
 	available_slots = manage_jobs(i % 100 == 0)
-	if i % 100 == 0:		#3*100 seconds = 5 minutes 
+	if i % 100 == 0:		#3*100 seconds = 5 minutes
 		print(len(remaining_work), "unassigned tasks in remaining work.", "times woken up", i)
 	i = i + 1
 	if should_i_terminate():
 		print("Terminating. This can be either because you created the .terminate file or because there is no more work.")
-		
+
 		try:
 			os.remove(terminate_work_file)
 		except:
