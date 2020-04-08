@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # QUEUE_FILE must now be specified as an environment variable. can be done during sbatch with --export=QUEUE_FILE="workload_name.slot_id.queue"
-TMP_QUEUE_FILE=$QUEUE_FILE".tmp"
+TMP_QUEUE_FILE=$QUEUE_FILE".worker.tmp"
 FAILED_QUEUE_FILE=$QUEUE_FILE".failed"
 DEBUG_FILE=$QUEUE_FILE".debug"
 

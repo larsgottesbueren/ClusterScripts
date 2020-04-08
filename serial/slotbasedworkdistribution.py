@@ -29,7 +29,7 @@ def chunk(l, nchunks):
 	return chunks
 
 def serialize(workload, filename):
-	tmp_filename = filename + '.tmp'
+	tmp_filename = filename + '.distributor.tmp'
 	with open(tmp_filename,'w') as f:
 		for l in workload:
 			f.write(l)
