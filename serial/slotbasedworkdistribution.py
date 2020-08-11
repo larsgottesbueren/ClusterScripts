@@ -8,6 +8,7 @@ import subprocess
 import os
 import time
 import glob
+import collections
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -22,10 +23,11 @@ remaining_work_file = "{}.remaining".format(workload_file)
 terminate_work_file = "{}.terminate".format(workload_file)
 
 
-def chunk(l, nchunks):
-	chunks = [ [] for i in range(nchunks)]
-	for c, w in zip( itertools.cycle(chunks), l ):
-		c.append(w)
+def chunk_and_extract(workload, num_tasks, num_chunks):
+	chunks = [ [] for i in range(num_chunks)]
+	assert(num_tasks <= len(workload))
+	for _, c in zip( range(num_tasks), itertools.cycle(chunks) ):
+		c.append(workload.popleft())
 	return chunks
 
 def serialize(workload, filename):
@@ -86,10 +88,10 @@ def get_available_slots(active_slots):
 		available_slots.remove(s)
 	return list(available_slots)
 
-def retake_work(workload_list, slot):
+def retake_work(workload_deque, slot):
 	fn = slotqueue_filename(slot)
 	if os.path.exists(fn):
-		workload_list.extend(remaining_work_of_slot(slot))
+		workload_deque.extendleft(reversed(remaining_work_of_slot(slot)))
 		os.remove(slotqueue_filename(slot))
 
 def submit(slot):
@@ -135,8 +137,7 @@ def manage_jobs(try_squeue):
 
 	slots_with_empty_queue = get_active_slots_with_empty_queue(active_slots)
 	num_tasks_to_distribute = min(len(slots_with_empty_queue) * MAX_TASKS_IN_SLOT_QUEUE, len(remaining_work))
-	chunked_tasks = chunk(remaining_work[:num_tasks_to_distribute], len(slots_with_empty_queue))
-	del remaining_work[:num_tasks_to_distribute]
+	chunked_tasks = chunk_and_extract(remaining_work, num_tasks_to_distribute, len(slots_with_empty_queue))
 	if num_tasks_to_distribute > 0 or old_remaining_tasks != len(remaining_work):	#save some IO, huh?
 		serialize_slot_work(chunked_tasks, slots_with_empty_queue)
 		serialize(remaining_work, remaining_work_file)
@@ -154,7 +155,7 @@ def load_remaining_work():
 		my_wf = workload_file
 		print("Reading initial workload file ", workload_file)
 	with open(my_wf,'r') as wf:
-		return [l for l in wf]
+		return collections.deque([l for l in wf])
 
 slot2jobid=dict()
 jobid2slot=dict()
